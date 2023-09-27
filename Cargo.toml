@@ -1,6 +1,6 @@
 [package]
 name = "mut-str"
-version = "1.0.0-alpha.1"
+version = "1.0.0-alpha.2"
 authors = ["Tom Boddaert"]
 edition = "2021"
 description = "A toolkit for mutable string slices (&mut str)."
@@ -19,4 +19,5 @@ crate-type = ["lib"]
 
 [features]
 default = ["std"]
-std = []
+alloc = []
+std = ["alloc"]

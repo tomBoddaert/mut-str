@@ -14,7 +14,7 @@ use crate::{Char, OwnedChar};
 ///
 /// CharRefs::from(s)
 ///     .zip(s.chars())
-///     .for_each(|(x, y)| assert_eq!(x, &y));
+///     .for_each(|(x, y)| assert_eq!(x, y));
 /// ```
 pub struct CharRefs<'a> {
     s: &'a [u8],
@@ -33,7 +33,7 @@ impl<'a> CharRefs<'a> {
     #[inline]
     /// Map the iterator to [`OwnedChar`] values.
     pub fn owned(self) -> core::iter::Map<Self, fn(&Char) -> OwnedChar> {
-        self.map(ToOwned::to_owned)
+        self.map(Char::as_owned)
     }
 }
 

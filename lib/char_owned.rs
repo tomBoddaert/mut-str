@@ -145,7 +145,7 @@ impl From<char> for OwnedChar {
 impl From<&Char> for OwnedChar {
     #[inline]
     fn from(value: &Char) -> Self {
-        value.to_owned()
+        value.as_owned()
     }
 }
 

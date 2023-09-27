@@ -30,11 +30,11 @@
 //!
 //! // Get character references
 //! let crown = welcome.get_char_mut(8).unwrap();
-//! assert_eq!(crown, &'👑');
+//! assert_eq!(crown, '👑');
 //!
 //! // Mutate characters
 //! crown.replace('🌍').unwrap();
-//! assert_eq!(crown, &'🌍');
+//! assert_eq!(crown, '🌍');
 //!
 //! // Slice by character index
 //! let l = welcome.char_slice_mut(..7).unwrap();
@@ -42,6 +42,18 @@
 //!
 //! assert_eq!(&*welcome, "   👋 🌍!");
 //! ```
+//!
+//! ## Links
+//! [Latest version of `mut-str` on crates.io](https://crates.io/crates/mut-str)  
+#![doc = concat!("[This version of `mut-str` on crates.io](https://crates.io/crates/mut-str/", env!("CARGO_PKG_VERSION"), ")  ")]
+//! [`mut-str` on GitHub](https://github.com/tomBoddaert/mut-str)
+//!
+//! # Features
+//! `std` (enabled by default) adds implementations specific to the standard library.
+//!
+//! ## License
+//!
+//! [`mut-str`](https://github.com/tomBoddaert/mut-str) is dual-licensed under either the Apache License Version 2.0 or MIT license at your option.
 
 #![warn(
     clippy::all,

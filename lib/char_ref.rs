@@ -1,8 +1,14 @@
 use core::{
     borrow::{Borrow, BorrowMut},
-    cmp, fmt, hash, slice,
+    cmp,
+    fmt::{self, Display},
+    hash, slice,
     str::{self, FromStr},
 };
+#[cfg(feature = "alloc")]
+extern crate alloc;
+#[cfg(feature = "alloc")]
+use alloc::borrow::ToOwned;
 
 use crate::{
     errors::{
@@ -146,6 +152,17 @@ impl Char {
         // `next for the first time on the `Chars` iterator will yield an
         // `Option::Some`.
         unsafe { self.as_str().chars().next().unwrap_unchecked() }
+    }
+
+    #[must_use]
+    #[inline]
+    /// Creates an [`OwnedChar`] from a borrowed [`Char`].
+    pub fn as_owned(&self) -> OwnedChar {
+        let bytes = self.as_bytes();
+
+        // SAFETY:
+        // `bytes` is guaranteed be to a valid UTF-8 character.
+        unsafe { OwnedChar::from_bytes_unchecked(bytes) }
     }
 
     #[inline]
@@ -479,13 +496,14 @@ impl fmt::Display for Char {
 impl fmt::Debug for Char {
     #[inline]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mut s = [b'\''; 6];
-        s[1..=self.len()].copy_from_slice(self.as_bytes());
+        let mut b = [b'\''; 6];
+        b[1..=self.len()].copy_from_slice(self.as_bytes());
 
         // SAFETY:
         // `self` is valid utf8, so when embedded in a string of single-byte
         // utf8 characters, the resulting string will be valid.
-        unsafe { str::from_utf8_unchecked(&s[..self.len() + 2]) }.fmt(f)
+        let s = unsafe { str::from_utf8_unchecked(&b[..self.len() + 2]) };
+        Display::fmt(s, f)
     }
 }
 
@@ -528,6 +546,20 @@ impl PartialEq<Char> for char {
     #[inline]
     fn eq(&self, other: &Char) -> bool {
         self.eq(&other.as_char())
+    }
+}
+
+impl PartialEq<char> for &Char {
+    #[inline]
+    fn eq(&self, other: &char) -> bool {
+        self.as_char().eq(other)
+    }
+}
+
+impl PartialEq<char> for &mut Char {
+    #[inline]
+    fn eq(&self, other: &char) -> bool {
+        self.as_char().eq(other)
     }
 }
 
@@ -617,17 +649,16 @@ impl BorrowMut<str> for Char {
     }
 }
 
+#[cfg(feature = "alloc")]
 impl ToOwned for Char {
     type Owned = OwnedChar;
 
+    #[inline]
     fn to_owned(&self) -> Self::Owned {
-        let bytes = self.as_bytes();
-
-        // SAFETY:
-        // `bytes` is guaranteed be to a valid UTF-8 character.
-        unsafe { OwnedChar::from_bytes_unchecked(bytes) }
+        self.as_owned()
     }
 
+    #[inline]
     fn clone_into(&self, target: &mut Self::Owned) {
         let bytes = self.as_bytes();
 
@@ -795,6 +826,8 @@ mod test {
             assert_eq!(actual.as_str_mut(), s2);
 
             let b = &buffer[..len];
+            // SAFETY:
+            // Not mutating.
             assert_eq!(unsafe { actual.as_bytes_mut() }, b);
 
             assert!(pr2.contains(&actual.as_ptr()));
@@ -891,7 +924,7 @@ mod test {
     fn test_eq() {
         for c in CharRefs::from(TEST_STR) {
             assert_eq!(c, c.as_str());
-            assert_eq!(c, &c.as_char());
+            assert_eq!(c, c.as_char());
 
             {
                 // Make sure that the character with a suffix does not equal it.

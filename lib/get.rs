@@ -10,7 +10,7 @@ use crate::Char;
 /// let s = "Hello, World!";
 /// let c = get_char(s, 1).unwrap();
 ///
-/// assert_eq!(c, &'e');
+/// assert_eq!(c, 'e');
 /// ```
 pub fn get_char(s: &str, i: usize) -> Option<&Char> {
     Char::get(s, i)
@@ -26,7 +26,7 @@ pub fn get_char(s: &str, i: usize) -> Option<&Char> {
 /// let mut owned_s = Box::<str>::from("Hello, World!");
 /// let c = get_char_mut(&mut *owned_s, 1).unwrap();
 ///
-/// assert_eq!(c, &'e');
+/// assert_eq!(c, 'e');
 /// ```
 pub fn get_char_mut(s: &mut str, i: usize) -> Option<&mut Char> {
     Char::get_mut(s, i)

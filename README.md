@@ -36,11 +36,11 @@ assert_eq!(&*welcome, "mut-str 👑!");
 
 // Get character references
 let crown = welcome.get_char_mut(8).unwrap();
-assert_eq!(crown, &'👑');
+assert_eq!(crown, '👑');
 
 // Mutate characters
 crown.replace('🌍').unwrap();
-assert_eq!(crown, &'🌍');
+assert_eq!(crown, '🌍');
 
 // Slice by character index
 let l = welcome.char_slice_mut(..7).unwrap();
@@ -56,6 +56,18 @@ assert_eq!(&*welcome, "   👋 🌍!");
 [`mut-str` on crates.io](https://crates.io/crates/mut-str)  
 [`mut-str` on GitHub](https://github.com/tomBoddaert/mut-str)
 
+# Features
+- `alloc` (enabled by default) adds implementations that require the `alloc` library.
+- `std` (enabled by default, requires `alloc`) adds implementations specific to the standard library.
+
+To make this package `no-std` compatible, disable the `std` feature.  
+```sh
+cargo add mut-str --no-default-features
+```
+```sh
+cargo add mut-str --no-default-features --features=alloc
+```
+
 ## License
 
-[`mut-str`](https://github.com/tomBoddaert/mut-str) is dual-licensed under either the Apache License Version 2.0 or MIT license at your option.
+[`mut-str`](https://github.com/tomBoddaert/mut-str) is dual-licensed under either the [Apache License Version 2.0](/LICENSE_Apache-2.0) or [MIT license](/LICENSE_MIT) at your option.

@@ -32,7 +32,7 @@ pub trait StrExt {
     /// let s = "Hello, World!";
     /// let c = s.get_char(1).unwrap();
     ///
-    /// assert_eq!(c, &'e');
+    /// assert_eq!(c, 'e');
     /// ```
     fn get_char(&self, i: usize) -> Option<&Char>;
     #[must_use]
@@ -44,7 +44,7 @@ pub trait StrExt {
     /// let mut owned_s = Box::<str>::from("Hello, World!");
     /// let c = owned_s.get_char_mut(1).unwrap();
     ///
-    /// assert_eq!(c, &'e');
+    /// assert_eq!(c, 'e');
     /// ```
     fn get_char_mut(&mut self, i: usize) -> Option<&mut Char>;
 
@@ -120,7 +120,7 @@ pub trait StrExt {
     ///
     /// s.ref_iter()
     ///     .zip(s.chars())
-    ///     .for_each(|(x, y)| assert_eq!(x, &y));
+    ///     .for_each(|(x, y)| assert_eq!(x, y));
     /// ```
     fn ref_iter(&self) -> Self::Iter<'_>;
     #[must_use]
@@ -134,7 +134,7 @@ pub trait StrExt {
     ///
     /// owned_s.mut_iter()
     ///     .zip(s.chars())
-    ///     .for_each(|(x, y)| assert_eq!(x, &y));
+    ///     .for_each(|(x, y)| assert_eq!(x, y));
     /// ```
     fn mut_iter(&mut self) -> Self::IterMut<'_>;
 

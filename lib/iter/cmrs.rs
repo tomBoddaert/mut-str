@@ -15,7 +15,7 @@ use crate::{Char, OwnedChar};
 ///
 /// CharMutRefs::from(&mut *owned_s)
 ///     .zip(s.chars())
-///     .for_each(|(x, y)| assert_eq!(x, &y));
+///     .for_each(|(x, y)| assert_eq!(x, y));
 /// ```
 pub struct CharMutRefs<'a> {
     s: &'a mut [u8],
@@ -44,7 +44,7 @@ impl<'a> CharMutRefs<'a> {
     #[inline]
     /// Map the iterator to [`OwnedChar`] values.
     pub fn owned(self) -> core::iter::Map<Self, fn(&mut Char) -> OwnedChar> {
-        self.map(|x| x.to_owned())
+        self.map(|x| x.as_owned())
     }
 }
 
