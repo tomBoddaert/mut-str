@@ -49,7 +49,17 @@
 //! [`mut-str` on GitHub](https://github.com/tomBoddaert/mut-str)
 //!
 //! # Features
-//! `std` (enabled by default) adds implementations specific to the standard library.
+#![doc = concat!("[Features on docs.rs](https://docs.rs/crate/mut-str/", env!("CARGO_PKG_VERSION"), "/features)  ")]
+//! - `alloc` (enabled by default) adds implementations that require the `alloc` library.
+//! - `std` (enabled by default, requires `alloc`) adds implementations specific to the standard library.
+//!
+//! To make this package `no-std` compatible, disable the `std` feature.  
+//! ```sh
+//! cargo add mut-str --no-default-features
+//! ```
+//! ```sh
+//! cargo add mut-str --no-default-features --features=alloc
+//! ```
 //!
 //! ## License
 //!

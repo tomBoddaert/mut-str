@@ -1,9 +1,9 @@
 [package]
 name = "mut-str"
-version = "1.0.0-alpha.2"
+version = "1.0.0-alpha.3"
 authors = ["Tom Boddaert"]
 edition = "2021"
-description = "A toolkit for mutable string slices (&mut str)."
+description = "A toolkit for working with mutable string slices (&mut str)."
 readme = "README.md"
 homepage = "https://github.com/tomBoddaert/mut-str"
 repository = "https://github.com/tomBoddaert/mut-str"

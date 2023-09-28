@@ -22,6 +22,15 @@ use crate::{
 /// A UTF-8 encoded character.
 ///
 /// This type can only be obtained as a reference or mutable reference.
+///
+/// ```
+/// use mut_str::Char;
+///
+/// let s = "Hello, World!";
+/// let c = Char::get(s, 1).unwrap();
+///
+/// assert_eq!(c, 'e');
+/// ```
 pub struct Char {
     c: u8,
 }
@@ -49,6 +58,15 @@ impl Char {
 
     #[must_use]
     /// Get a character reference from a string slice and an index.
+    ///
+    /// ```
+    /// use mut_str::Char;
+    ///
+    /// let s = "Hello, World!";
+    /// let c = Char::get(s, 1).unwrap();
+    ///
+    /// assert_eq!(c, 'e');
+    /// ```
     pub fn get(s: &str, i: usize) -> Option<&Self> {
         let mut chars = s.char_indices();
         let start = chars.nth(i)?.0;
@@ -62,6 +80,15 @@ impl Char {
 
     #[must_use]
     /// Get a mutable character reference from a mutable string slice and an index.
+    ///
+    /// ```
+    /// use mut_str::Char;
+    ///
+    /// let mut s = Box::<str>::from("Hello, World!");
+    /// let c = Char::get_mut(&mut *s, 1).unwrap();
+    ///
+    /// assert_eq!(c, 'e');
+    /// ```
     pub fn get_mut(s: &mut str, i: usize) -> Option<&mut Self> {
         let mut chars = s.char_indices();
         let start = chars.nth(i)?.0;
@@ -82,6 +109,17 @@ impl Char {
     /// Get the length of the character.
     ///
     /// This will be in the range `1..=4`.
+    ///
+    /// ```
+    /// use mut_str::Char;
+    ///
+    /// let s = "oΦ⏣🌑";
+    ///
+    /// assert_eq!(Char::get(s, 0).unwrap().len(), 1);
+    /// assert_eq!(Char::get(s, 1).unwrap().len(), 2);
+    /// assert_eq!(Char::get(s, 2).unwrap().len(), 3);
+    /// assert_eq!(Char::get(s, 3).unwrap().len(), 4);
+    /// ```
     pub fn len(&self) -> usize {
         match self.c.leading_ones() {
             0 => 1,
@@ -107,6 +145,18 @@ impl Char {
     #[must_use]
     #[inline]
     /// Get the character as a byte slice ([`prim@slice`]).
+    ///
+    /// ```
+    /// use mut_str::Char;
+    ///
+    /// let s = "Hello, 🌍!";
+    ///
+    /// let c = Char::get(s, 1).unwrap();
+    /// assert_eq!(c.as_bytes(), &[101]);
+    ///
+    /// let c = Char::get(s, 7).unwrap();
+    /// assert_eq!(c.as_bytes(), &[240, 159, 140, 141]);
+    /// ```
     pub fn as_bytes(&self) -> &[u8] {
         // SAFETY:
         // The pointer is to the start of the character in the utf8 string.
@@ -128,6 +178,18 @@ impl Char {
     #[must_use]
     #[inline]
     /// Get the character as a string slice ([`prim@str`]).
+    ///
+    /// ```
+    /// use mut_str::Char;
+    ///
+    /// let s = "Hello, 🌍!";
+    ///
+    /// let c = Char::get(s, 1).unwrap();
+    /// assert_eq!(c.as_str(), "e");
+    ///
+    /// let c = Char::get(s, 7).unwrap();
+    /// assert_eq!(c.as_str(), "🌍");
+    /// ```
     pub fn as_str(&self) -> &str {
         // SAFETY:
         // `self.s` is guaranteed to be the bytes of a valid utf8 string.
@@ -137,6 +199,18 @@ impl Char {
     #[must_use]
     #[inline]
     /// Get the character as a mutable string slice ([`prim@str`]).
+    ///
+    /// ```
+    /// use mut_str::Char;
+    ///
+    /// let mut s = Box::<str>::from("Hello, 🌍!");
+    ///
+    /// let c = Char::get_mut(&mut *s, 1).unwrap();
+    /// assert_eq!(c.as_str_mut(), "e");
+    ///
+    /// let c = Char::get_mut(&mut *s, 7).unwrap();
+    /// assert_eq!(c.as_str_mut(), "🌍");
+    /// ```
     pub fn as_str_mut(&mut self) -> &mut str {
         // SAFETY:
         // `self.s` is guaranteed to be the bytes of a valid utf8 string.
@@ -146,6 +220,18 @@ impl Char {
 
     #[must_use]
     /// Get the character as a [`char`].
+    ///
+    /// ```
+    /// use mut_str::Char;
+    ///
+    /// let s = "Hello, 🌍!";
+    ///
+    /// let c = Char::get(s, 1).unwrap();
+    /// assert_eq!(c.as_char(), 'e');
+    ///
+    /// let c = Char::get(s, 7).unwrap();
+    /// assert_eq!(c.as_char(), '🌍');
+    /// ```
     pub fn as_char(&self) -> char {
         // SAFETY:
         // `self` is guaranteed to contain exactly one character, so calling`
@@ -157,6 +243,18 @@ impl Char {
     #[must_use]
     #[inline]
     /// Creates an [`OwnedChar`] from a borrowed [`Char`].
+    ///
+    /// ```
+    /// use mut_str::{Char, OwnedChar};
+    ///
+    /// let s = "Hello, 🌍!";
+    ///
+    /// let c = Char::get(s, 1).unwrap();
+    /// assert_eq!(c.as_owned(), OwnedChar::from('e'));
+    ///
+    /// let c = Char::get(s, 7).unwrap();
+    /// assert_eq!(c.as_owned(), OwnedChar::from('🌍'));
+    /// ```
     pub fn as_owned(&self) -> OwnedChar {
         let bytes = self.as_bytes();
 
@@ -168,6 +266,18 @@ impl Char {
     #[inline]
     /// Copy the character to a byte buffer and get the string slice containing the inserted character.
     /// Returns `None` if `buffer` is shorter than `self`.
+    ///
+    /// ```
+    /// use mut_str::Char;
+    ///
+    /// let s = "Hello, World!";
+    /// let c = Char::get(s, 1).unwrap();
+    ///
+    /// let mut buffer = [0; 4];
+    /// let c2 = c.copy_to(&mut buffer).unwrap();
+    ///
+    /// assert_eq!(c2, c);
+    /// ```
     pub fn copy_to<'a>(&self, buffer: &'a mut [u8]) -> Option<&'a mut Self> {
         let len = self.len();
         if len > buffer.len() {
@@ -182,6 +292,19 @@ impl Char {
     }
 
     /// Replace the character with another of the same length.
+    ///
+    /// ```
+    /// use mut_str::Char;
+    ///
+    /// let mut s = Box::<str>::from("oΦ⏣🌑");
+    ///
+    /// let c = Char::get_mut(&mut *s, 0).unwrap();
+    /// assert!(c.replace('e').is_ok());
+    /// assert_eq!(&*s, "eΦ⏣🌑");
+    ///
+    /// let c = Char::get_mut(&mut *s, 1).unwrap();
+    /// assert!(c.replace('a').is_err());
+    /// ```
     ///
     /// # Errors
     /// - If `r`, when utf8 encoded, does not have the same length as `self`, [`LenNotEqual`] will be returned.
@@ -204,6 +327,20 @@ impl Char {
 
     /// Replace the character with another of the same length or shorter.
     /// The remaining bytes will be filled with spaces.
+    ///
+    /// ```
+    /// use mut_str::Char;
+    ///
+    /// let mut s = Box::<str>::from("oΦ⏣🌑");
+    ///
+    /// let c = Char::get_mut(&mut *s, 0).unwrap();
+    /// assert!(c.replace_with_pad_space('e').is_ok());
+    /// assert_eq!(&*s, "eΦ⏣🌑");
+    ///
+    /// let c = Char::get_mut(&mut *s, 1).unwrap();
+    /// assert!(c.replace_with_pad_space('a').is_ok());
+    /// assert_eq!(&*s, "ea ⏣🌑");
+    /// ```
     ///
     /// # Errors
     /// - If `r`, when utf8 encoded, is longer than `self`, [`ReplacementTooLong`] will be returned.
@@ -229,6 +366,20 @@ impl Char {
 
     /// Replace the character with another of the same length or shorter.
     /// The remaining bytes will be filled with `pad`.
+    ///
+    /// ```
+    /// use mut_str::Char;
+    ///
+    /// let mut s = Box::<str>::from("oΦ⏣🌑");
+    ///
+    /// let c = Char::get_mut(&mut *s, 0).unwrap();
+    /// assert!(c.replace_with_pad('e', b'b').is_ok());
+    /// assert_eq!(&*s, "eΦ⏣🌑");
+    ///
+    /// let c = Char::get_mut(&mut *s, 1).unwrap();
+    /// assert!(c.replace_with_pad('a', b'b').is_ok());
+    /// assert_eq!(&*s, "eab⏣🌑");
+    /// ```
     ///
     /// # Errors
     /// - If `pad` is not valid utf8, [`ReplaceWithPadError::InvalidPad`] will be returned.
@@ -257,6 +408,20 @@ impl Char {
 
     /// Replace the character with another of the same length or shorter.
     /// The remaining bytes will be filled with `pad`, which must be one byte long.
+    ///
+    /// ```
+    /// use mut_str::Char;
+    ///
+    /// let mut s = Box::<str>::from("oΦ⏣🌑");
+    ///
+    /// let c = Char::get_mut(&mut *s, 0).unwrap();
+    /// assert!(c.replace_with_pad_char('e', 'b').is_ok());
+    /// assert_eq!(&*s, "eΦ⏣🌑");
+    ///
+    /// let c = Char::get_mut(&mut *s, 1).unwrap();
+    /// assert!(c.replace_with_pad_char('a', 'b').is_ok());
+    /// assert_eq!(&*s, "eab⏣🌑");
+    /// ```
     ///
     /// # Errors
     /// - If `pad_char`, when utf8 encoded, is longer than `Self`, [`ReplaceWithPadCharError::PadCharTooLong`] will be returned.
@@ -296,6 +461,22 @@ impl Char {
     /// Replace the character with another of the same length or shorter, right aligned.
     /// The remaining bytes before the character will be filled with spaces.
     ///
+    /// ```
+    /// use mut_str::Char;
+    ///
+    /// let mut s = Box::<str>::from("oΦ⏣🌑");
+    ///
+    /// let c = Char::get_mut(&mut *s, 0).unwrap();
+    /// assert!(c.replace_with_pad_left_space('e').is_ok());
+    /// assert_eq!(&*s, "eΦ⏣🌑");
+    ///
+    /// let c = Char::get_mut(&mut *s, 1).unwrap();
+    /// let c2 = c.replace_with_pad_left_space('a').unwrap();
+    /// assert_eq!(c2, 'a');
+    /// assert_eq!(c, ' ');
+    /// assert_eq!(&*s, "e a⏣🌑");
+    /// ```
+    ///
     /// # Errors
     /// - If `r`, when utf8 encoded, is longer than `self`, [`ReplacementTooLong`] will be returned.
     pub fn replace_with_pad_left_space<C>(&mut self, r: C) -> Result<&mut Self, ReplacementTooLong>
@@ -324,6 +505,22 @@ impl Char {
 
     /// Replace the character with another of the same length or shorter, right aligned.
     /// The remaining bytes before the character will be filled with `pad`.
+    ///
+    /// ```
+    /// use mut_str::Char;
+    ///
+    /// let mut s = Box::<str>::from("oΦ⏣🌑");
+    ///
+    /// let c = Char::get_mut(&mut *s, 0).unwrap();
+    /// assert!(c.replace_with_pad_left('e', b'b').is_ok());
+    /// assert_eq!(&*s, "eΦ⏣🌑");
+    ///
+    /// let c = Char::get_mut(&mut *s, 1).unwrap();
+    /// let c2 = c.replace_with_pad_left('a', b'b').unwrap();
+    /// assert_eq!(c2, 'a');
+    /// assert_eq!(c, 'b');
+    /// assert_eq!(&*s, "eba⏣🌑");
+    /// ```
     ///
     /// # Errors
     /// - If `pad` is not valid utf8, [`ReplaceWithPadError::InvalidPad`] will be returned.
@@ -360,6 +557,22 @@ impl Char {
 
     /// Replace the character with another of the same length or shorter, right aligned.
     /// The remaining bytes before the character will be filled with `char`, which must be one byte long.
+    ///
+    /// ```
+    /// use mut_str::Char;
+    ///
+    /// let mut s = Box::<str>::from("oΦ⏣🌑");
+    ///
+    /// let c = Char::get_mut(&mut *s, 0).unwrap();
+    /// assert!(c.replace_with_pad_left_char('e', 'b').is_ok());
+    /// assert_eq!(&*s, "eΦ⏣🌑");
+    ///
+    /// let c = Char::get_mut(&mut *s, 1).unwrap();
+    /// let c2 = c.replace_with_pad_left_char('a', 'b').unwrap();
+    /// assert_eq!(c2, 'a');
+    /// assert_eq!(c, 'b');
+    /// assert_eq!(&*s, "eba⏣🌑");
+    /// ```
     ///
     /// # Errors
     /// - If `pad_char`, when utf8 encoded, is longer than `Self`, [`ReplaceWithPadCharError::PadCharTooLong`] will be returned.
@@ -403,6 +616,18 @@ impl Char {
     #[must_use]
     #[inline]
     /// Checks if the value is within ASCII range.
+    ///
+    /// ```
+    /// use mut_str::Char;
+    ///
+    /// let s = "oΦ⏣🌑";
+    ///
+    /// let c = Char::get(s, 0).unwrap();
+    /// assert!(c.is_ascii());
+    ///
+    /// let c = Char::get(s, 1).unwrap();
+    /// assert!(!c.is_ascii());
+    /// ```
     pub const fn is_ascii(&self) -> bool {
         self.c.is_ascii()
     }
@@ -411,6 +636,20 @@ impl Char {
     /// Converts this type to its ASCII upper case equivalent in-place.
     ///
     /// ASCII letters ‘a’ to ‘z’ are mapped to 'A' to 'Z', but non-ASCII letters are unchanged.
+    ///
+    /// ```
+    /// use mut_str::Char;
+    ///
+    /// let mut s = Box::<str>::from("oφ⏣🌑");
+    ///
+    /// let c = Char::get_mut(&mut *s, 0).unwrap();
+    /// c.make_ascii_uppercase();
+    ///
+    /// let c = Char::get_mut(&mut *s, 1).unwrap();
+    /// c.make_ascii_uppercase();
+    ///
+    /// assert_eq!(&*s, "Oφ⏣🌑");
+    /// ```
     pub fn make_ascii_uppercase(&mut self) {
         self.c.make_ascii_uppercase();
     }
@@ -419,11 +658,39 @@ impl Char {
     /// Converts this type to its ASCII lower case equivalent in-place.
     ///
     /// ASCII letters 'A' to 'Z' are mapped to 'a' to 'z', but non-ASCII letters are unchanged.
+    ///
+    /// ```
+    /// use mut_str::Char;
+    ///
+    /// let mut s = Box::<str>::from("OΦ⏣🌑");
+    ///
+    /// let c = Char::get_mut(&mut *s, 0).unwrap();
+    /// c.make_ascii_lowercase();
+    ///
+    /// let c = Char::get_mut(&mut *s, 1).unwrap();
+    /// c.make_ascii_lowercase();
+    ///
+    /// assert_eq!(&*s, "oΦ⏣🌑");
+    /// ```
     pub fn make_ascii_lowercase(&mut self) {
         self.c.make_ascii_lowercase();
     }
 
     /// Converts this type to its Unicode upper case equivalent in-place.
+    ///
+    /// ```
+    /// use mut_str::Char;
+    ///
+    /// let mut s = Box::<str>::from("oφ⏣🌑");
+    ///
+    /// let c = Char::get_mut(&mut *s, 0).unwrap();
+    /// c.try_make_uppercase().unwrap();
+    ///
+    /// let c = Char::get_mut(&mut *s, 1).unwrap();
+    /// c.try_make_uppercase().unwrap();
+    ///
+    /// assert_eq!(&*s, "OΦ⏣🌑");
+    /// ```
     ///
     /// # Errors
     /// If the character and its uppercase version is not the same length when utf8 encoded, [`LenNotEqual`] will be returned.
@@ -455,6 +722,20 @@ impl Char {
     }
 
     /// Converts this type to its Unicode lower case equivalent in-place.
+    ///
+    /// ```
+    /// use mut_str::Char;
+    ///
+    /// let mut s = Box::<str>::from("OΦ⏣🌑");
+    ///
+    /// let c = Char::get_mut(&mut *s, 0).unwrap();
+    /// c.try_make_lowercase().unwrap();
+    ///
+    /// let c = Char::get_mut(&mut *s, 1).unwrap();
+    /// c.try_make_lowercase().unwrap();
+    ///
+    /// assert_eq!(&*s, "oφ⏣🌑");
+    /// ```
     ///
     /// # Errors
     /// If the character and its lowercase version is not the same length when utf8 encoded, [`LenNotEqual`] will be returned.
