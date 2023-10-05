@@ -29,7 +29,7 @@ pub enum ReplaceWithPadCharError {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-/// Try from [`prim@str`] error can occur when trying to convert a string slice ([`prim@str`]) to a [`crate::Char`].
+/// Try from [`prim@str`] error can occur when trying to convert a [`prim@str`] to a [`crate::Char`].
 pub enum TryFromStrError {
     /// The [`prim@str`] contains no characters.
     Empty,

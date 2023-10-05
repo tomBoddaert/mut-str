@@ -3,7 +3,7 @@ use core::{iter::FusedIterator, mem::transmute, str};
 use crate::{Char, OwnedChar};
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
-/// An iterator over mutable references to the UTF-8 encoded characters of a mutable string slice.
+/// An iterator over mutable references to the UTF-8 encoded characters of a mutable [`prim@str`].
 ///
 /// This is created by [`Self::from()`].
 ///

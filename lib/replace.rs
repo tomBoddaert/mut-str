@@ -4,7 +4,7 @@ use crate::errors::{
     LenNotEqual, ReplaceWithPadCharError, ReplaceWithPadError, ReplacementTooLong,
 };
 
-/// Replace the string slice with another of the same length.
+/// Replace the [`prim@str`] with another of the same length.
 ///
 /// ```
 /// use mut_str::replace;
@@ -33,7 +33,7 @@ pub fn replace<'a>(s: &'a mut str, r: &str) -> Result<&'a mut str, LenNotEqual> 
     Ok(s)
 }
 
-/// Replace the string slice with another of the same length or shorter.
+/// Replace the [`prim@str`] with another of the same length or shorter.
 /// The remaining bytes will be filled with spaces.
 ///
 /// ```
@@ -71,7 +71,7 @@ pub fn replace_with_pad_space<'a>(
     Ok(unsafe { str::from_utf8_unchecked_mut(slice) })
 }
 
-/// Replace the string slice with another of the same length or shorter.
+/// Replace the [`prim@str`] with another of the same length or shorter.
 /// The remaining bytes will be filled with `pad`.
 ///
 /// ```
@@ -113,7 +113,7 @@ pub fn replace_with_pad<'a>(
     Ok(unsafe { str::from_utf8_unchecked_mut(slice) })
 }
 
-/// Replace the string slice with another of the same length or shorter.
+/// Replace the [`prim@str`] with another of the same length or shorter.
 /// The remaining bytes will be filled with `pad`, which must be one byte long.
 ///
 /// ```
@@ -165,8 +165,8 @@ where
     Ok(unsafe { str::from_utf8_unchecked_mut(slice) })
 }
 
-/// Replace the string slice with another of the same length or shorter, right aligned.
-/// The remaining bytes before the string slice will be filled with spaces.
+/// Replace the [`prim@str`] with another of the same length or shorter, right aligned.
+/// The remaining bytes before the [`prim@str`] will be filled with spaces.
 ///
 /// ```
 /// use mut_str::replace_with_pad_left_space;
@@ -205,8 +205,8 @@ pub fn replace_with_pad_left_space<'a>(
     Ok(unsafe { str::from_utf8_unchecked_mut(slice) })
 }
 
-/// Replace the string slice with another of the same length or shorter, right aligned.
-/// The remaining bytes before the character string slice will be filled with `pad`.
+/// Replace the [`prim@str`] with another of the same length or shorter, right aligned.
+/// The remaining bytes before the character [`prim@str`] will be filled with `pad`.
 ///
 /// ```
 /// use mut_str::replace_with_pad_left;
@@ -249,8 +249,8 @@ pub fn replace_with_pad_left<'a>(
     Ok(unsafe { str::from_utf8_unchecked_mut(slice) })
 }
 
-/// Replace the string slice with another of the same length or shorter, right aligned.
-/// The remaining bytes before the string slice will be filled with `char`, which must be one byte long.
+/// Replace the [`prim@str`] with another of the same length or shorter, right aligned.
+/// The remaining bytes before the [`prim@str`] will be filled with `char`, which must be one byte long.
 ///
 /// ```
 /// use mut_str::replace_with_pad_left_char;

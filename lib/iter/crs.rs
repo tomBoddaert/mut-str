@@ -3,7 +3,7 @@ use core::{iter::FusedIterator, str};
 use crate::{Char, OwnedChar};
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
-/// An iterator over references to the UTF-8 encoded characters of a string slice.
+/// An iterator over references to the UTF-8 encoded characters of a [`prim@str`].
 ///
 /// This is created by [`Self::from()`].
 ///

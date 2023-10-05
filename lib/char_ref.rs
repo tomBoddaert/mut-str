@@ -57,7 +57,7 @@ impl Char {
     }
 
     #[must_use]
-    /// Get a character reference from a string slice and an index.
+    /// Get a character reference from a [`prim@str`] and an index.
     ///
     /// ```
     /// use mut_str::Char;
@@ -79,7 +79,7 @@ impl Char {
     }
 
     #[must_use]
-    /// Get a mutable character reference from a mutable string slice and an index.
+    /// Get a mutable character reference from a mutable [`prim@str`] and an index.
     ///
     /// ```
     /// use mut_str::Char;
@@ -177,7 +177,7 @@ impl Char {
 
     #[must_use]
     #[inline]
-    /// Get the character as a string slice ([`prim@str`]).
+    /// Get the character as a [`prim@str`].
     ///
     /// ```
     /// use mut_str::Char;
@@ -198,7 +198,7 @@ impl Char {
 
     #[must_use]
     #[inline]
-    /// Get the character as a mutable string slice ([`prim@str`]).
+    /// Get the character as a mutable [`prim@str`].
     ///
     /// ```
     /// use mut_str::Char;
@@ -264,7 +264,7 @@ impl Char {
     }
 
     #[inline]
-    /// Copy the character to a byte buffer and get the string slice containing the inserted character.
+    /// Copy the character to a byte buffer and get the [`prim@str`] containing the inserted character.
     /// Returns `None` if `buffer` is shorter than `self`.
     ///
     /// ```
@@ -1220,7 +1220,7 @@ mod test {
                 assert_ne!(c, s);
             }
             assert_ne!(c, "b");
-            assert_ne!(c, &'b');
+            assert_ne!(c, 'b');
         }
     }
 }

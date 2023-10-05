@@ -61,9 +61,25 @@ impl OwnedChar {
     /// Get the underlying buffer as a mutable array.
     ///
     /// # Safety
-    /// The caller must ensure that when the mutable reference returned is dropped, there is a valid UTF-8 encoded character ath the start of the buffer.
+    /// The caller must ensure that when the mutable reference returned is dropped, there is a valid UTF-8 encoded character at the start of the buffer.
     pub unsafe fn buffer_mut(&mut self) -> &mut [u8; 4] {
         &mut self.b
+    }
+
+    #[must_use]
+    #[inline]
+    /// Get the underlying buffer. **This is not guaranteed to be valid UTF-8!**
+    ///
+    /// The first `self.len()` bytes will be valid UTF-8.
+    ///
+    /// ```
+    /// use mut_str::OwnedChar;
+    ///
+    /// let c = OwnedChar::from('🌑');
+    /// assert_eq!(c.into_bytes(), [240, 159, 140, 145]);
+    /// ```
+    pub const fn into_bytes(self) -> [u8; 4] {
+        self.b
     }
 }
 
@@ -212,5 +228,25 @@ impl Ord for OwnedChar {
     #[inline]
     fn cmp(&self, other: &Self) -> core::cmp::Ordering {
         self.as_ref().cmp(other)
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use crate::{OwnedChar, StrExt};
+
+    #[test]
+    fn test_from_char_ref() {
+        let s = "abc";
+        let c = s.get_char(1).unwrap().as_owned();
+        assert_eq!(c.as_bytes(), &[98]);
+        assert_eq!(c, 'b');
+    }
+
+    #[test]
+    fn test_from_char() {
+        let c = OwnedChar::from('b');
+        assert_eq!(c.as_bytes(), &[98]);
+        assert_eq!(c, 'b');
     }
 }

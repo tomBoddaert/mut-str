@@ -105,7 +105,7 @@ pub use split::*;
 pub use traits::*;
 
 #[inline]
-/// Copy the string slice to a byte buffer and get the new string slice containing the inserted character.
+/// Copy the [`prim@str`] to a byte buffer and get the new [`prim@str`] containing the inserted character.
 /// Returns `None` if `buffer` is shorter than the string slice.
 ///
 /// ```
