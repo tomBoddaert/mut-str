@@ -35,7 +35,7 @@ impl<'a> CharMutRefs<'a> {
     #[must_use]
     #[inline]
     /// Get the remaining mutable string to be iterated over.
-    pub fn as_str_mut<'b>(&'b mut self) -> &'b str {
+    pub fn as_str_mut<'b>(&'b mut self) -> &'b mut str {
         // SAFETY:
         // `self.s` is guaranteed to be the bytes of a valid utf8 string.
         unsafe { str::from_utf8_unchecked_mut(self.s) }
