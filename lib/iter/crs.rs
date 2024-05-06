@@ -86,6 +86,23 @@ impl<'a> Iterator for CharRefs<'a> {
     {
         self.next_back()
     }
+
+    fn nth(&mut self, n: usize) -> Option<Self::Item> {
+        // SAFETY:
+        // `self.s` is guaranteed to be the bytes of a valid utf8 string.
+        let (index, char) = unsafe { str::from_utf8_unchecked(self.s) }
+            .char_indices()
+            .nth(n)?;
+
+        let (prefix, remaining) = self.s.split_at(index + char.len_utf8());
+        self.s = remaining;
+        let char_slice = &prefix[index..];
+
+        // SAFETY:
+        // `char_slice` is guaranteed to be a valid utf8 string containing
+        // exactly one character.
+        Some(unsafe { &*Char::new_unchecked(char_slice.as_ptr()) })
+    }
 }
 
 impl<'a> DoubleEndedIterator for CharRefs<'a> {
@@ -98,6 +115,23 @@ impl<'a> DoubleEndedIterator for CharRefs<'a> {
 
         let (remaining, char_slice) = self.s.split_at(self.s.len() - char.len_utf8());
         self.s = remaining;
+
+        // SAFETY:
+        // `char_slice` is guaranteed to be a valid utf8 string containing
+        // exactly one character.
+        Some(unsafe { &*Char::new_unchecked(char_slice.as_ptr()) })
+    }
+
+    fn nth_back(&mut self, n: usize) -> Option<Self::Item> {
+        // SAFETY:
+        // `self.s` is guaranteed to be the bytes of a valid utf8 string.
+        let (index, char) = unsafe { str::from_utf8_unchecked(self.s) }
+            .char_indices()
+            .nth_back(n)?;
+
+        let (remaining, prefix) = self.s.split_at(index);
+        self.s = remaining;
+        let char_slice = &prefix[..char.len_utf8()];
 
         // SAFETY:
         // `char_slice` is guaranteed to be a valid utf8 string containing
@@ -133,6 +167,25 @@ mod test {
     }
 
     #[test]
+    fn test_nth() {
+        for step in 0..4 {
+            let mut iter = CharRefs::from(TEST_STR);
+            let mut expected_chars = TEST_STR.chars();
+
+            while let Some(expected) = expected_chars.nth(step) {
+                let actual = iter.nth(step).expect("expected a character ref");
+
+                assert_eq!(actual.len(), expected.len_utf8());
+                assert_eq!(actual.as_char(), expected);
+            }
+
+            assert!(iter.nth(step).is_none(), "expected no more character refs");
+        }
+
+        assert!(CharRefs::from(TEST_STR).nth(4).is_none());
+    }
+
+    #[test]
     fn test_backwards() {
         let mut iter = CharRefs::from(TEST_STR);
 
@@ -151,5 +204,27 @@ mod test {
         let size_hint = iter.size_hint();
         assert_eq!(size_hint.0, 0);
         assert_eq!(size_hint.1, Some(0));
+    }
+
+    #[test]
+    fn test_nth_backwards() {
+        for step in 0..4 {
+            let mut iter = CharRefs::from(TEST_STR);
+            let mut expected_chars = TEST_STR.chars();
+
+            while let Some(expected) = expected_chars.nth_back(step) {
+                let actual = iter.nth_back(step).expect("expected a character ref");
+
+                assert_eq!(actual.len(), expected.len_utf8());
+                assert_eq!(actual.as_char(), expected);
+            }
+
+            assert!(
+                iter.nth_back(step).is_none(),
+                "expected no more character refs"
+            );
+        }
+
+        assert!(CharRefs::from(TEST_STR).nth_back(4).is_none());
     }
 }

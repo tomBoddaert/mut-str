@@ -1,6 +1,6 @@
 [package]
 name = "mut-str"
-version = "1.0.1"
+version = "1.0.2"
 authors = ["Tom Boddaert"]
 edition = "2021"
 description = "A toolkit for working with mutable string slices (&mut str)."

@@ -2,6 +2,7 @@ use core::{
     borrow::{Borrow, BorrowMut},
     fmt,
     ops::{Deref, DerefMut},
+    ptr,
 };
 
 use crate::{
@@ -90,7 +91,7 @@ impl AsRef<Char> for OwnedChar {
         // `self` is transparent bytes and contains a utf8 encoded character at
         // the start, so this cast is valid, as the pointer will be to the
         // start of a utf8 character.
-        unsafe { &*(self as *const Self).cast() }
+        unsafe { &*ptr::from_ref(self).cast() }
     }
 }
 
@@ -101,7 +102,7 @@ impl AsMut<Char> for OwnedChar {
         // `self` is transparent bytes and contains a utf8 encoded character at
         // the start, so this cast is valid, as the pointer will be to the
         // start of a utf8 character.
-        unsafe { &mut *(self as *mut Self).cast() }
+        unsafe { &mut *ptr::from_mut(self).cast() }
     }
 }
 

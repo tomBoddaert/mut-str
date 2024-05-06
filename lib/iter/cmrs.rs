@@ -108,6 +108,32 @@ impl<'a> Iterator for CharMutRefs<'a> {
     {
         self.next_back()
     }
+
+    fn nth<'b>(&'b mut self, n: usize) -> Option<Self::Item> {
+        // SAFETY:
+        // `self.s` is guaranteed to be the bytes of a valid utf8 string.
+        let (index, char) = unsafe { str::from_utf8_unchecked(self.s) }
+            .char_indices()
+            .nth(n)?;
+
+        // SAFETY:
+        // As the string slice is split each time, this iterator will not hand out
+        // multiple mutable references to the same data, so extending its lifetime
+        // to `'a` is valid.
+        let (prefix, remaining) = unsafe {
+            transmute::<(&'b mut [u8], &'b mut [u8]), (&'a mut [u8], &'a mut [u8])>(
+                self.s.split_at_mut(index + char.len_utf8()),
+            )
+        };
+
+        self.s = remaining;
+        let char_slice = &mut prefix[index..];
+
+        // SAFETY:
+        // `char_slice` is guaranteed to be a valid utf8 string containing
+        // exactly one character.
+        Some(unsafe { &mut *Char::new_unchecked_mut(char_slice.as_mut_ptr()) })
+    }
 }
 
 impl<'a> DoubleEndedIterator for CharMutRefs<'a> {
@@ -129,6 +155,32 @@ impl<'a> DoubleEndedIterator for CharMutRefs<'a> {
         };
 
         self.s = remaining;
+
+        // SAFETY:
+        // `char_slice` is guaranteed to be a valid utf8 string containing
+        // exactly one character.
+        Some(unsafe { &mut *Char::new_unchecked_mut(char_slice.as_mut_ptr()) })
+    }
+
+    fn nth_back<'b>(&'b mut self, n: usize) -> Option<Self::Item> {
+        // SAFETY:
+        // `self.s` is guaranteed to be the bytes of a valid utf8 string.
+        let (index, char) = unsafe { str::from_utf8_unchecked(self.s) }
+            .char_indices()
+            .nth_back(n)?;
+
+        // SAFETY:
+        // As the string slice is split each time, this iterator will not hand out
+        // multiple mutable references to the same data, so extending its lifetime
+        // to `'a` is valid.
+        let (remaining, prefix) = unsafe {
+            transmute::<(&'b mut [u8], &'b mut [u8]), (&'a mut [u8], &'a mut [u8])>(
+                self.s.split_at_mut(index),
+            )
+        };
+
+        self.s = remaining;
+        let char_slice = &mut prefix[..char.len_utf8()];
 
         // SAFETY:
         // `char_slice` is guaranteed to be a valid utf8 string containing
@@ -168,6 +220,27 @@ mod test {
     }
 
     #[test]
+    fn test_nth() {
+        let mut s = test_str_owned();
+
+        for step in 0..4 {
+            let mut iter = CharMutRefs::from(&mut *s);
+            let mut expected_chars = TEST_STR.chars();
+
+            while let Some(expected) = expected_chars.nth(step) {
+                let actual = iter.nth(step).expect("expected a character ref");
+
+                assert_eq!(actual.len(), expected.len_utf8());
+                assert_eq!(actual.as_char(), expected);
+            }
+
+            assert!(iter.nth(step).is_none(), "expected no more character refs");
+        }
+
+        assert!(CharMutRefs::from(&mut *s).nth(4).is_none());
+    }
+
+    #[test]
     fn test_backwards() {
         let mut s = test_str_owned();
         let mut iter = CharMutRefs::from(&mut *s);
@@ -187,6 +260,30 @@ mod test {
         let size_hint = iter.size_hint();
         assert_eq!(size_hint.0, 0);
         assert_eq!(size_hint.1, Some(0));
+    }
+
+    #[test]
+    fn test_nth_backwards() {
+        let mut s = test_str_owned();
+
+        for step in 0..4 {
+            let mut iter = CharMutRefs::from(&mut *s);
+            let mut expected_chars = TEST_STR.chars();
+
+            while let Some(expected) = expected_chars.nth_back(step) {
+                let actual = iter.nth_back(step).expect("expected a character ref");
+
+                assert_eq!(actual.len(), expected.len_utf8());
+                assert_eq!(actual.as_char(), expected);
+            }
+
+            assert!(
+                iter.nth_back(step).is_none(),
+                "expected no more character refs"
+            );
+        }
+
+        assert!(CharMutRefs::from(&mut *s).nth_back(4).is_none());
     }
 
     #[test]

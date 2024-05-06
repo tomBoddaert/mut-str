@@ -2,11 +2,13 @@ use core::{
     borrow::{Borrow, BorrowMut},
     cmp,
     fmt::{self, Display},
-    hash, slice,
+    hash, ptr, slice,
     str::{self, FromStr},
 };
 #[cfg(feature = "alloc")]
 extern crate alloc;
+// `ToOwned` is in the std prelude, so ignore unused import
+#[allow(unused_imports)]
 #[cfg(feature = "alloc")]
 use alloc::borrow::ToOwned;
 
@@ -21,7 +23,7 @@ use crate::{
 #[repr(transparent)]
 /// A UTF-8 encoded character.
 ///
-/// This type can only be obtained as a reference or mutable reference.
+/// This type can only be obtained as a reference or mutable reference similarly to [`prim@str`].
 ///
 /// ```
 /// use mut_str::Char;
@@ -51,7 +53,8 @@ impl Char {
     /// Create a new mutable character reference from a mutable pointer to a character.
     ///
     /// # Safety
-    /// `p` must be a mutable pointer to the first byte of a valid UTF-8 character.
+    /// `p` must be a mutable pointer to the first byte of a valid UTF-8 character that
+    /// can be mutated. String literals cannot be mutated.
     pub const unsafe fn new_unchecked_mut(p: *mut u8) -> *mut Self {
         p.cast()
     }
@@ -104,9 +107,9 @@ impl Char {
 
     #[must_use]
     #[inline]
-    // This will never be empty.
+    // This can never be empty.
     #[allow(clippy::len_without_is_empty)]
-    /// Get the length of the character.
+    /// Get the length of the character in bytes.
     ///
     /// This will be in the range `1..=4`.
     ///
@@ -132,14 +135,14 @@ impl Char {
     #[inline]
     /// Get a pointer to the character ([`prim@pointer`]).
     pub const fn as_ptr(&self) -> *const u8 {
-        (self as *const Self).cast()
+        ptr::from_ref(self).cast()
     }
 
     #[must_use]
     #[inline]
     /// Get a mutable pointer to the character ([`prim@pointer`]).
     pub fn as_mut_ptr(&mut self) -> *mut u8 {
-        (self as *mut Self).cast()
+        ptr::from_mut(self).cast()
     }
 
     #[must_use]
@@ -700,9 +703,11 @@ impl Char {
         let mut buffer = [0; 4];
         let mut index = 0;
 
+        let self_len = self.len();
+
         for char in chars {
             let len = char.len_utf8();
-            if index + len > 4 {
+            if index + len > self_len {
                 return Err(LenNotEqual);
             }
 
@@ -710,7 +715,7 @@ impl Char {
             index += len;
         }
 
-        if index != self.len() {
+        if index != self_len {
             return Err(LenNotEqual);
         }
 
@@ -745,9 +750,11 @@ impl Char {
         let mut buffer = [0; 4];
         let mut index = 0;
 
+        let self_len = self.len();
+
         for char in chars {
             let len = char.len_utf8();
-            if index + len > 4 {
+            if index + len > self_len {
                 return Err(LenNotEqual);
             }
 
@@ -755,7 +762,7 @@ impl Char {
             index += len;
         }
 
-        if index != self.len() {
+        if index != self_len {
             return Err(LenNotEqual);
         }
 

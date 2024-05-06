@@ -15,10 +15,13 @@ use crate::{
 /// use mut_str::StrExt;
 /// ```
 pub trait StrExt {
+    /// The output string type for string operations.
     type Output: ?Sized;
+    /// The iterator type for iterating over [`Char`] references.
     type Iter<'a>: Iterator<Item = &'a Char>
     where
         Self: 'a;
+    /// The iterator type for iterating over mutable [`Char`] references.
     type IterMut<'a>: Iterator<Item = &'a mut Char>
     where
         Self: 'a;

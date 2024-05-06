@@ -1,4 +1,6 @@
 extern crate alloc;
+// `String` and `Box` are in the std prelude, so ignore unused import
+#[allow(unused_imports)]
 use alloc::{boxed::Box, string::String};
 
 use crate::{Char, OwnedChar};
