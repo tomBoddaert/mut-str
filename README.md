@@ -59,6 +59,7 @@ assert_eq!(&*welcome, "   👋 🌍!");
 # Features
 - `alloc` (enabled by default) adds implementations that require the `alloc` library.
 - `std` (enabled by default, requires `alloc`) adds implementations specific to the standard library.
+- `future` (requires [nightly](https://rust-lang.github.io/rustup/concepts/channels.html)) uses the `extern_types` unstable feature to fix pointer provenance issues.
 
 To make this package `no-std` compatible, disable the `std` feature.  
 ```sh

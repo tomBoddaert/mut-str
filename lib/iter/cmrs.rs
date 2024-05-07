@@ -1,6 +1,6 @@
-use core::{iter::FusedIterator, mem::transmute, str};
+use core::{iter::FusedIterator, str};
 
-use crate::{Char, OwnedChar};
+use crate::{char_rsplit_at_mut, char_split_at_mut, extend_lifetime_mut, Char, OwnedChar};
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
 /// An iterator over mutable references to the UTF-8 encoded characters of a mutable [`prim@str`].
@@ -18,27 +18,23 @@ use crate::{Char, OwnedChar};
 ///     .for_each(|(x, y)| assert_eq!(x, y));
 /// ```
 pub struct CharMutRefs<'a> {
-    s: &'a mut [u8],
+    s: &'a mut str,
 }
 
-#[allow(clippy::needless_lifetimes)]
+// #[allow(clippy::needless_lifetimes)]
 impl<'a> CharMutRefs<'a> {
     #[must_use]
     #[inline]
     /// Get the remaining string to be iterated over.
-    pub const fn as_str<'b>(&'b self) -> &'b str {
-        // SAFETY:
-        // `self.s` is guaranteed to be the bytes of a valid utf8 string.
-        unsafe { str::from_utf8_unchecked(self.s) }
+    pub const fn as_str(&self) -> &str {
+        self.s
     }
 
     #[must_use]
     #[inline]
     /// Get the remaining mutable string to be iterated over.
-    pub fn as_str_mut<'b>(&'b mut self) -> &'b mut str {
-        // SAFETY:
-        // `self.s` is guaranteed to be the bytes of a valid utf8 string.
-        unsafe { str::from_utf8_unchecked_mut(self.s) }
+    pub fn as_str_mut(&mut self) -> &mut str {
+        self.s
     }
 
     #[inline]
@@ -51,38 +47,25 @@ impl<'a> CharMutRefs<'a> {
 impl<'a> From<&'a mut str> for CharMutRefs<'a> {
     #[inline]
     fn from(value: &'a mut str) -> Self {
-        Self {
-            // SAFETY:
-            // `Self` ensures that the string remains valid utf8.
-            s: unsafe { value.as_bytes_mut() },
-        }
+        Self { s: value }
     }
 }
 
 impl<'a> Iterator for CharMutRefs<'a> {
     type Item = &'a mut Char;
 
-    fn next<'b>(&'b mut self) -> Option<Self::Item> {
+    fn next(&mut self) -> Option<Self::Item> {
+        let (c, remaining) = char_split_at_mut(self.s, 1)?;
         // SAFETY:
-        // `self.s` is guaranteed to be the bytes of a valid utf8 string.
-        let char = unsafe { str::from_utf8_unchecked(self.s) }.chars().next()?;
+        // The subslice is created from `self.s` and immediately replaces
+        // it, so the lifetime can be extended.
+        self.s = unsafe { extend_lifetime_mut(remaining) };
 
         // SAFETY:
-        // As the string slice is split each time, this iterator will not hand out
-        // multiple mutable references to the same data, so extending its lifetime
-        // to `'a` is valid.
-        let (char_slice, remaining) = unsafe {
-            transmute::<(&'b mut [u8], &'b mut [u8]), (&'a mut [u8], &'a mut [u8])>(
-                self.s.split_at_mut(char.len_utf8()),
-            )
-        };
-
-        self.s = remaining;
-
-        // SAFETY:
-        // `char_slice` is guaranteed to be a valid utf8 string containing
-        // exactly one character.
-        Some(unsafe { &mut *Char::new_unchecked_mut(char_slice.as_mut_ptr()) })
+        // `c` is a utf8 string with 1 character in, as returned by
+        // `char_split_at`, so `c.as_ptr()` points to the start of a
+        // utf8 character.
+        Some(unsafe { &mut *Char::new_unchecked_mut(c.as_mut_ptr()) })
     }
 
     #[inline]
@@ -96,9 +79,7 @@ impl<'a> Iterator for CharMutRefs<'a> {
     where
         Self: Sized,
     {
-        // SAFETY:
-        // `self.s` is guaranteed to be the bytes of a valid utf8 string.
-        unsafe { str::from_utf8_unchecked(self.s) }.chars().count()
+        self.s.chars().count()
     }
 
     #[inline]
@@ -109,83 +90,90 @@ impl<'a> Iterator for CharMutRefs<'a> {
         self.next_back()
     }
 
-    fn nth<'b>(&'b mut self, n: usize) -> Option<Self::Item> {
-        // SAFETY:
-        // `self.s` is guaranteed to be the bytes of a valid utf8 string.
-        let (index, char) = unsafe { str::from_utf8_unchecked(self.s) }
-            .char_indices()
-            .nth(n)?;
-
-        // SAFETY:
-        // As the string slice is split each time, this iterator will not hand out
-        // multiple mutable references to the same data, so extending its lifetime
-        // to `'a` is valid.
-        let (prefix, remaining) = unsafe {
-            transmute::<(&'b mut [u8], &'b mut [u8]), (&'a mut [u8], &'a mut [u8])>(
-                self.s.split_at_mut(index + char.len_utf8()),
-            )
+    fn nth(&mut self, n: usize) -> Option<Self::Item> {
+        let Some(mid) = n.checked_add(1) else {
+            // SAFETY:
+            // `0..0` is always a valid subslice.
+            // The subslice is created from `self.s` and immediately replaces
+            // it, so the lifetime can be extended.
+            self.s = unsafe { extend_lifetime_mut(self.s.get_unchecked_mut(0..0)) };
+            return None;
         };
 
-        self.s = remaining;
-        let char_slice = &mut prefix[index..];
+        let Some((head, remaining)) = char_split_at_mut(self.s, mid) else {
+            // SAFETY:
+            // `0..0` is always a valid subslice.
+            // The subslice is created from `self.s` and immediately replaces
+            // it, so the lifetime can be extended.
+            self.s = unsafe { extend_lifetime_mut(self.s.get_unchecked_mut(0..0)) };
+            return None;
+        };
 
         // SAFETY:
-        // `char_slice` is guaranteed to be a valid utf8 string containing
-        // exactly one character.
-        Some(unsafe { &mut *Char::new_unchecked_mut(char_slice.as_mut_ptr()) })
+        // `remaining` and `tail` were created from `self.s` with lifetime 'a.
+        // `self.s` is now replaced with one half, so both lifetimes can be extended.
+        self.s = unsafe { extend_lifetime_mut(remaining) };
+
+        // SAFETY:
+        // `head` must contain at least one character, as `mid >= 1`, therefore
+        // `char_indices.last()` will return a `Some` value.
+        let (index, _) = unsafe { head.char_indices().last().unwrap_unchecked() };
+        // SAFETY:
+        // `index` is obtained from `CharIndices`, so it is within the bounds
+        // of `head` and must be on a character boundry.
+        let ptr = unsafe { head.as_mut_ptr().add(index) };
+
+        // SAFETY:
+        // `ptr` is a pointer to the start of a utf8 character.
+        Some(unsafe { &mut *Char::new_unchecked_mut(ptr) })
     }
 }
 
 impl<'a> DoubleEndedIterator for CharMutRefs<'a> {
-    fn next_back<'b>(&'b mut self) -> Option<Self::Item> {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        let (remaining, c) = char_rsplit_at_mut(self.s, 1)?;
         // SAFETY:
-        // `self.s` is guaranteed to be the bytes of a valid utf8 string.
-        let char = unsafe { str::from_utf8_unchecked(self.s) }
-            .chars()
-            .next_back()?;
+        // The subslice is created from `self.s` and immediately replaces
+        // it, so the lifetime can be extended.
+        self.s = unsafe { extend_lifetime_mut(remaining) };
 
         // SAFETY:
-        // As the string slice is split each time, this iterator will not hand out
-        // multiple mutable references to the same data, so extending its lifetime
-        // to `'a` is valid.
-        let (remaining, char_slice) = unsafe {
-            transmute::<(&'b mut [u8], &'b mut [u8]), (&'a mut [u8], &'a mut [u8])>(
-                self.s.split_at_mut(self.s.len() - char.len_utf8()),
-            )
-        };
-
-        self.s = remaining;
-
-        // SAFETY:
-        // `char_slice` is guaranteed to be a valid utf8 string containing
-        // exactly one character.
-        Some(unsafe { &mut *Char::new_unchecked_mut(char_slice.as_mut_ptr()) })
+        // `c` is a utf8 string with 1 character in, as returned by
+        // `char_split_at`, so `c.as_ptr()` points to the start of a
+        // utf8 character.
+        Some(unsafe { &mut *Char::new_unchecked_mut(c.as_mut_ptr()) })
     }
 
-    fn nth_back<'b>(&'b mut self, n: usize) -> Option<Self::Item> {
-        // SAFETY:
-        // `self.s` is guaranteed to be the bytes of a valid utf8 string.
-        let (index, char) = unsafe { str::from_utf8_unchecked(self.s) }
-            .char_indices()
-            .nth_back(n)?;
-
-        // SAFETY:
-        // As the string slice is split each time, this iterator will not hand out
-        // multiple mutable references to the same data, so extending its lifetime
-        // to `'a` is valid.
-        let (remaining, prefix) = unsafe {
-            transmute::<(&'b mut [u8], &'b mut [u8]), (&'a mut [u8], &'a mut [u8])>(
-                self.s.split_at_mut(index),
-            )
+    fn nth_back(&mut self, n: usize) -> Option<Self::Item> {
+        let Some(mid) = n.checked_add(1) else {
+            // SAFETY:
+            // `0..0` is always a valid subslice.
+            // The subslice is created from `self.s` and immediately replaces
+            // it, so the lifetime can be extended.
+            self.s = unsafe { extend_lifetime_mut(self.s.get_unchecked_mut(0..0)) };
+            return None;
         };
 
-        self.s = remaining;
-        let char_slice = &mut prefix[..char.len_utf8()];
+        let Some((remaining, tail)) = char_rsplit_at_mut(self.s, mid) else {
+            // SAFETY:
+            // `0..0` is always a valid subslice.
+            // The subslice is created from `self.s` and immediately replaces
+            // it, so the lifetime can be extended.
+            self.s = unsafe { extend_lifetime_mut(self.s.get_unchecked_mut(0..0)) };
+            return None;
+        };
 
         // SAFETY:
-        // `char_slice` is guaranteed to be a valid utf8 string containing
-        // exactly one character.
-        Some(unsafe { &mut *Char::new_unchecked_mut(char_slice.as_mut_ptr()) })
+        // `remaining` and `tail` were created from `self.s` with lifetime 'a.
+        // `self.s` is now replaced with one half, so both lifetimes can be extended.
+        self.s = unsafe { extend_lifetime_mut(remaining) };
+
+        let ptr = tail.as_mut_ptr();
+
+        // SAFETY:
+        // `ptr` is a pointer to the start of a utf8 string (`tail`)
+        // with at least one character as `mid >= 1`.
+        Some(unsafe { &mut *Char::new_unchecked_mut(ptr) })
     }
 }
 

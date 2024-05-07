@@ -1,6 +1,6 @@
 use core::{iter::FusedIterator, str};
 
-use crate::{Char, OwnedChar};
+use crate::{char_rsplit_at, char_split_at, Char, OwnedChar};
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 /// An iterator over references to the UTF-8 encoded characters of a [`prim@str`].
@@ -17,7 +17,7 @@ use crate::{Char, OwnedChar};
 ///     .for_each(|(x, y)| assert_eq!(x, y));
 /// ```
 pub struct CharRefs<'a> {
-    s: &'a [u8],
+    s: &'a str,
 }
 
 impl<'a> CharRefs<'a> {
@@ -25,9 +25,7 @@ impl<'a> CharRefs<'a> {
     #[inline]
     /// Get the remaining string to be iterated over.
     pub const fn as_str(&self) -> &'a str {
-        // SAFETY:
-        // `self.s` is guaranteed to be the bytes of a valid utf8 string.
-        unsafe { str::from_utf8_unchecked(self.s) }
+        self.s
     }
 
     #[inline]
@@ -40,27 +38,23 @@ impl<'a> CharRefs<'a> {
 impl<'a> From<&'a str> for CharRefs<'a> {
     #[inline]
     fn from(value: &'a str) -> Self {
-        Self {
-            s: value.as_bytes(),
-        }
+        Self { s: value }
     }
 }
 
 impl<'a> Iterator for CharRefs<'a> {
     type Item = &'a Char;
 
+    #[inline]
     fn next(&mut self) -> Option<Self::Item> {
-        // SAFETY:
-        // `self.s` is guaranteed to be the bytes of a valid utf8 string.
-        let char = unsafe { str::from_utf8_unchecked(self.s) }.chars().next()?;
-
-        let (char_slice, remaining) = self.s.split_at(char.len_utf8());
+        let (c, remaining) = char_split_at(self.s, 1)?;
         self.s = remaining;
 
         // SAFETY:
-        // `char_slice` is guaranteed to be a valid utf8 string containing
-        // exactly one character.
-        Some(unsafe { &*Char::new_unchecked(char_slice.as_ptr()) })
+        // `c` is a utf8 string with 1 character in, as returned by
+        // `char_split_at`, so `c.as_ptr()` points to the start of a
+        // utf8 character.
+        Some(unsafe { &*Char::new_unchecked(c.as_ptr()) })
     }
 
     #[inline]
@@ -74,9 +68,7 @@ impl<'a> Iterator for CharRefs<'a> {
     where
         Self: Sized,
     {
-        // SAFETY:
-        // `self.s` is guaranteed to be the bytes of a valid utf8 string.
-        unsafe { str::from_utf8_unchecked(self.s) }.chars().count()
+        self.s.chars().count()
     }
 
     #[inline]
@@ -88,55 +80,55 @@ impl<'a> Iterator for CharRefs<'a> {
     }
 
     fn nth(&mut self, n: usize) -> Option<Self::Item> {
-        // SAFETY:
-        // `self.s` is guaranteed to be the bytes of a valid utf8 string.
-        let (index, char) = unsafe { str::from_utf8_unchecked(self.s) }
-            .char_indices()
-            .nth(n)?;
-
-        let (prefix, remaining) = self.s.split_at(index + char.len_utf8());
+        let Some((head, remaining)) = n.checked_add(1).and_then(|mid| char_split_at(self.s, mid))
+        else {
+            self.s = "";
+            return None;
+        };
         self.s = remaining;
-        let char_slice = &prefix[index..];
 
         // SAFETY:
-        // `char_slice` is guaranteed to be a valid utf8 string containing
-        // exactly one character.
-        Some(unsafe { &*Char::new_unchecked(char_slice.as_ptr()) })
+        // `head` must contain at least one character, as `mid >= 1`, therefore
+        // `char_indices.last()` will return a `Some` value.
+        let (index, _) = unsafe { head.char_indices().last().unwrap_unchecked() };
+        // SAFETY:
+        // `index` is obtained from `CharIndices`, so it is within the bounds
+        // of `head` and must be on a character boundry.
+        let ptr = unsafe { head.as_ptr().add(index) };
+
+        // SAFETY:
+        // `ptr` is a pointer to the start of a utf8 character.
+        Some(unsafe { &*Char::new_unchecked(ptr) })
     }
 }
 
 impl<'a> DoubleEndedIterator for CharRefs<'a> {
+    #[inline]
     fn next_back(&mut self) -> Option<Self::Item> {
-        // SAFETY:
-        // `self.s` is guaranteed to be the bytes of a valid utf8 string.
-        let char = unsafe { str::from_utf8_unchecked(self.s) }
-            .chars()
-            .next_back()?;
-
-        let (remaining, char_slice) = self.s.split_at(self.s.len() - char.len_utf8());
+        let (remaining, c) = char_rsplit_at(self.s, 1)?;
         self.s = remaining;
 
         // SAFETY:
-        // `char_slice` is guaranteed to be a valid utf8 string containing
-        // exactly one character.
-        Some(unsafe { &*Char::new_unchecked(char_slice.as_ptr()) })
+        // `c` is a utf8 string with 1 character in, as returned by
+        // `char_split_at`, so `c.as_ptr()` points to the start of a
+        // utf8 character.
+        Some(unsafe { &*Char::new_unchecked(c.as_ptr()) })
     }
 
     fn nth_back(&mut self, n: usize) -> Option<Self::Item> {
-        // SAFETY:
-        // `self.s` is guaranteed to be the bytes of a valid utf8 string.
-        let (index, char) = unsafe { str::from_utf8_unchecked(self.s) }
-            .char_indices()
-            .nth_back(n)?;
-
-        let (remaining, prefix) = self.s.split_at(index);
+        let Some((remaining, tail)) = n.checked_add(1).and_then(|mid| char_rsplit_at(self.s, mid))
+        else {
+            self.s = "";
+            return None;
+        };
         self.s = remaining;
-        let char_slice = &prefix[..char.len_utf8()];
+
+        let ptr = tail.as_ptr();
 
         // SAFETY:
-        // `char_slice` is guaranteed to be a valid utf8 string containing
-        // exactly one character.
-        Some(unsafe { &*Char::new_unchecked(char_slice.as_ptr()) })
+        // `ptr` is a pointer to the start of a utf8 string (`tail`)
+        // with at least one character as `mid >= 1`.
+        Some(unsafe { &*Char::new_unchecked(ptr) })
     }
 }
 

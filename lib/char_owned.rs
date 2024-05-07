@@ -2,7 +2,6 @@ use core::{
     borrow::{Borrow, BorrowMut},
     fmt,
     ops::{Deref, DerefMut},
-    ptr,
 };
 
 use crate::{
@@ -88,10 +87,8 @@ impl AsRef<Char> for OwnedChar {
     #[inline]
     fn as_ref(&self) -> &Char {
         // SAFETY:
-        // `self` is transparent bytes and contains a utf8 encoded character at
-        // the start, so this cast is valid, as the pointer will be to the
-        // start of a utf8 character.
-        unsafe { &*ptr::from_ref(self).cast() }
+        // `self.b` is a slice that contains a valid utf8 character.
+        unsafe { &*Char::new_unchecked(self.b.as_ptr()) }
     }
 }
 
@@ -99,10 +96,8 @@ impl AsMut<Char> for OwnedChar {
     #[inline]
     fn as_mut(&mut self) -> &mut Char {
         // SAFETY:
-        // `self` is transparent bytes and contains a utf8 encoded character at
-        // the start, so this cast is valid, as the pointer will be to the
-        // start of a utf8 character.
-        unsafe { &mut *ptr::from_mut(self).cast() }
+        // `self.b` is a mutable slice that contains a valid utf8 character.
+        unsafe { &mut *Char::new_unchecked_mut(self.b.as_mut_ptr()) }
     }
 }
 

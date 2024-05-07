@@ -1,3 +1,7 @@
+// Clippy recommends using `ptr::cast`, which does not work with unsized types,
+// like the future implementation of `Char`
+#![cfg_attr(not(feature = "future"), allow(clippy::ptr_as_ptr))]
+
 use core::{
     borrow::{Borrow, BorrowMut},
     cmp,
@@ -20,7 +24,18 @@ use crate::{
     OwnedChar,
 };
 
-#[repr(transparent)]
+mod char_internal {
+    #[cfg(feature = "future")]
+    extern "Rust" {
+        pub type Char;
+    }
+
+    #[cfg(not(feature = "future"))]
+    pub struct Char {
+        _c: u8,
+    }
+}
+
 /// A UTF-8 encoded character.
 ///
 /// This type can only be obtained as a reference or mutable reference similarly to [`prim@str`].
@@ -33,9 +48,7 @@ use crate::{
 ///
 /// assert_eq!(c, 'e');
 /// ```
-pub struct Char {
-    c: u8,
-}
+pub use char_internal::Char;
 
 impl Char {
     #[must_use]
@@ -45,7 +58,7 @@ impl Char {
     /// # Safety
     /// `p` must be a pointer to the first byte of a valid UTF-8 character.
     pub const unsafe fn new_unchecked(p: *const u8) -> *const Self {
-        p.cast()
+        p as *const Self
     }
 
     #[must_use]
@@ -56,7 +69,27 @@ impl Char {
     /// `p` must be a mutable pointer to the first byte of a valid UTF-8 character that
     /// can be mutated. String literals cannot be mutated.
     pub const unsafe fn new_unchecked_mut(p: *mut u8) -> *mut Self {
-        p.cast()
+        p as *mut Self
+    }
+
+    #[must_use]
+    #[inline]
+    /// Read the first byte of the character.
+    const fn first_byte(&self) -> u8 {
+        // SAFETY:
+        // The character that `&self` points to must be at least 1 byte
+        // long, so reading the first byte is valid.
+        unsafe { *ptr::from_ref::<Self>(self).cast() }
+    }
+
+    #[must_use]
+    #[inline]
+    /// Get a mutable reference to the first byte of the character.
+    ///
+    /// # Safety
+    /// The caller must only mutate the value if it is an ASCII character, and the byte must remain valid ASCII.
+    unsafe fn first_byte_mut(&mut self) -> &mut u8 {
+        &mut *ptr::from_mut::<Self>(self).cast()
     }
 
     #[must_use]
@@ -71,13 +104,16 @@ impl Char {
     /// assert_eq!(c, 'e');
     /// ```
     pub fn get(s: &str, i: usize) -> Option<&Self> {
-        let mut chars = s.char_indices();
-        let start = chars.nth(i)?.0;
-
-        let p = s.as_bytes().get(start)?;
+        let (start, _) = s.char_indices().nth(i)?;
 
         // SAFETY:
-        // Pointer offset is from `CharIndices`, so it is valid.
+        // `start` is an offset obtained from `CharIndices` and is
+        // therefore within the bounds of the string.
+        let p = unsafe { s.as_ptr().add(start) };
+
+        // SAFETY:
+        // As the offset is from `CharIndices`, `p` points to the first
+        // byte of a utf8 character.
         Some(unsafe { &*Self::new_unchecked(p) })
     }
 
@@ -93,15 +129,17 @@ impl Char {
     /// assert_eq!(c, 'e');
     /// ```
     pub fn get_mut(s: &mut str, i: usize) -> Option<&mut Self> {
-        let mut chars = s.char_indices();
-        let start = chars.nth(i)?.0;
+        let (start, _) = s.char_indices().nth(i)?;
 
         // SAFETY:
-        // `Self` maintains utf8 validity.
-        let p = unsafe { s.as_bytes_mut() }.get_mut(start)?;
+        // `start` is an offset obtained from `CharIndices` and is
+        // therefore within the bounds of the string.
+        // `Self` also maintains utf8 validity.
+        let p = unsafe { s.as_mut_ptr().add(start) };
 
         // SAFETY:
-        // Pointer offset is from `CharIndices`, so it is valid.
+        // As the offset is from `CharIndices`, `p` points to the first
+        // byte of a utf8 character, and the string is mutable.
         Some(unsafe { &mut *Self::new_unchecked_mut(p) })
     }
 
@@ -124,7 +162,7 @@ impl Char {
     /// assert_eq!(Char::get(s, 3).unwrap().len(), 4);
     /// ```
     pub fn len(&self) -> usize {
-        match self.c.leading_ones() {
+        match self.first_byte().leading_ones() {
             0 => 1,
             l @ 2..=4 => l as usize,
             _ => unreachable!("invalid char pointer"),
@@ -135,14 +173,14 @@ impl Char {
     #[inline]
     /// Get a pointer to the character ([`prim@pointer`]).
     pub const fn as_ptr(&self) -> *const u8 {
-        ptr::from_ref(self).cast()
+        ptr::from_ref::<Self>(self).cast()
     }
 
     #[must_use]
     #[inline]
     /// Get a mutable pointer to the character ([`prim@pointer`]).
     pub fn as_mut_ptr(&mut self) -> *mut u8 {
-        ptr::from_mut(self).cast()
+        ptr::from_mut::<Self>(self).cast()
     }
 
     #[must_use]
@@ -172,6 +210,19 @@ impl Char {
     #[inline]
     /// Get the character as a mutable byte slice ([`prim@slice`]).
     ///
+    /// ```
+    /// use mut_str::Char;
+    ///
+    /// let mut s = Box::from("Hello, 🌍!");
+    ///
+    /// let c = Char::get_mut(&mut *s, 1).unwrap();
+    /// let b = unsafe { c.as_bytes_mut() };
+    /// assert_eq!(b, &[101]);
+    /// b[0] = b'E';
+    ///
+    /// assert_eq!(&*s, "HEllo, 🌍!");
+    /// ```
+    ///
     /// # Safety
     /// See [`str::as_bytes_mut`].
     pub unsafe fn as_bytes_mut(&mut self) -> &mut [u8] {
@@ -195,7 +246,8 @@ impl Char {
     /// ```
     pub fn as_str(&self) -> &str {
         // SAFETY:
-        // `self.s` is guaranteed to be the bytes of a valid utf8 string.
+        // `&self` points to a valid utf8 character,
+        // so it is also a valid utf8 string.
         unsafe { str::from_utf8_unchecked(self.as_bytes()) }
     }
 
@@ -216,8 +268,8 @@ impl Char {
     /// ```
     pub fn as_str_mut(&mut self) -> &mut str {
         // SAFETY:
-        // `self.s` is guaranteed to be the bytes of a valid utf8 string.
-        // It can be assumed that a `str` will stay valid.
+        // `&self` points to a valid utf8 character,
+        // so it is also a valid utf8 string.
         unsafe { str::from_utf8_unchecked_mut(self.as_bytes_mut()) }
     }
 
@@ -267,7 +319,7 @@ impl Char {
     }
 
     #[inline]
-    /// Copy the character to a byte buffer and get the [`prim@str`] containing the inserted character.
+    /// Copy the character to a byte buffer and get a mutable reference to the inserted character.
     /// Returns `None` if `buffer` is shorter than `self`.
     ///
     /// ```
@@ -632,7 +684,7 @@ impl Char {
     /// assert!(!c.is_ascii());
     /// ```
     pub const fn is_ascii(&self) -> bool {
-        self.c.is_ascii()
+        self.first_byte().is_ascii()
     }
 
     #[inline]
@@ -654,7 +706,10 @@ impl Char {
     /// assert_eq!(&*s, "Oφ⏣🌑");
     /// ```
     pub fn make_ascii_uppercase(&mut self) {
-        self.c.make_ascii_uppercase();
+        // SAFETY:
+        // `make_ascii_uppercase` only mutates the value if it is ASCII
+        // and maintains ASCII validity.
+        unsafe { self.first_byte_mut() }.make_ascii_uppercase();
     }
 
     #[inline]
@@ -676,7 +731,10 @@ impl Char {
     /// assert_eq!(&*s, "oΦ⏣🌑");
     /// ```
     pub fn make_ascii_lowercase(&mut self) {
-        self.c.make_ascii_lowercase();
+        // SAFETY:
+        // `make_ascii_lowercase` only mutates the value if it is ASCII
+        // and maintains ASCII validity.
+        unsafe { self.first_byte_mut() }.make_ascii_lowercase();
     }
 
     /// Converts this type to its Unicode upper case equivalent in-place.
@@ -684,7 +742,7 @@ impl Char {
     /// ```
     /// use mut_str::Char;
     ///
-    /// let mut s = Box::<str>::from("oφ⏣🌑");
+    /// let mut s = Box::<str>::from("oß⏣🌑");
     ///
     /// let c = Char::get_mut(&mut *s, 0).unwrap();
     /// c.try_make_uppercase().unwrap();
@@ -692,7 +750,7 @@ impl Char {
     /// let c = Char::get_mut(&mut *s, 1).unwrap();
     /// c.try_make_uppercase().unwrap();
     ///
-    /// assert_eq!(&*s, "OΦ⏣🌑");
+    /// assert_eq!(&*s, "OSS⏣🌑");
     /// ```
     ///
     /// # Errors
@@ -720,8 +778,8 @@ impl Char {
         }
 
         // SAFETY:
-        // Replacing the character with a valid utf8 character of the same
-        // length is valid.
+        // Replacing the character with a valid utf8 string of the same
+        // byte length is valid.
         unsafe { self.as_bytes_mut() }.copy_from_slice(&buffer[..index]);
         Ok(())
     }
@@ -767,8 +825,8 @@ impl Char {
         }
 
         // SAFETY:
-        // Replacing the character with a valid utf8 character of the same
-        // length is valid.
+        // Replacing the character with a valid utf8 string of the same
+        // byte length is valid.
         unsafe { self.as_bytes_mut() }.copy_from_slice(&buffer[..index]);
         Ok(())
     }
@@ -975,7 +1033,7 @@ impl TryFrom<&str> for &Char {
 
         // SAFETY:
         // `value` is a `str` with at least one character, so its pointer must
-        // point to a valid character.
+        // point to a valid utf8 character.
         let c = unsafe { &*Char::new_unchecked(value.as_ptr()) };
 
         if value.len() == c.len() {

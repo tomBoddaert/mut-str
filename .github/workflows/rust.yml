@@ -2,7 +2,7 @@ name: Rust
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "**" ]
   pull_request:
     branches: [ "main" ]
 
@@ -10,27 +10,52 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build:
 
+  rust:
     runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v3
-    - name: Clippy
+
+    - name: Clippy (stable)
       run: |
         cargo clippy --all-targets
-        cargo clippy --all-targets --all-features
-        cargo clippy --no-default-features
-        cargo clippy --no-default-features --features="alloc"
-        cargo clippy --all-features -- -W clippy::unwrap_used -W clippy::expect_used
-    - name: Build
+        cargo clippy --no-default-features -- -W clippy::unwrap_used -W clippy::expect_used
+        cargo clippy --no-default-features --features="alloc" -- -W clippy::unwrap_used -W clippy::expect_used
+        cargo clippy -- -W clippy::unwrap_used -W clippy::expect_used
+
+    - name: Build (stable)
       run: |
         cargo build --verbose
-        cargo build --verbose --all-features
         cargo build --verbose --no-default-features
         cargo build --verbose --no-default-features --features="alloc"
-    - name: Run tests
+
+    - name: Run tests (stable)
       run: |
-        cargo test
-        cargo test --all-features
-        cargo test --examples
+        cargo test --all-targets --no-fail-fast
+
+    - name: Install nightly + Miri
+      run: |
+        rustup toolchain install nightly --component miri
+        rustup override set nightly
+        cargo miri setup
+
+    - name: Clippy (nightly)
+      run: |
+        cargo clippy --all-targets --features="future"
+        cargo clippy --no-default-features --features="future" -- -W clippy::unwrap_used -W clippy::expect_used
+        cargo clippy --no-default-features --features="future,alloc" -- -W clippy::unwrap_used -W clippy::expect_used
+        cargo clippy --features="future" -- -W clippy::unwrap_used -W clippy::expect_used
+
+    - name: Build (nightly)
+      run: |
+        cargo build --verbose --features="future"
+        cargo build --verbose --no-default-features --features="future"
+        cargo build --verbose --no-default-features --features="future,alloc"
+
+    - name: Run tests (nightly)
+      run: |
+        cargo test --all-targets --features="future" --no-fail-fast
+
+    - name: Run tests (nightly, miri)
+      run: cargo miri test --all-targets --features="future" --no-fail-fast

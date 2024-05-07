@@ -52,6 +52,7 @@
 #![doc = concat!("[Features on docs.rs](https://docs.rs/crate/mut-str/", env!("CARGO_PKG_VERSION"), "/features)  ")]
 //! - `alloc` (enabled by default) adds implementations that require the `alloc` library.
 //! - `std` (enabled by default, requires `alloc`) adds implementations specific to the standard library.
+//! - `future` (requires [nightly](https://rust-lang.github.io/rustup/concepts/channels.html)) uses the `extern_types` unstable feature to fix pointer provenance issues.
 //!
 //! To make this package `no-std` compatible, disable the `std` feature.  
 //! ```sh
@@ -65,6 +66,7 @@
 //!
 //! [`mut-str`](https://github.com/tomBoddaert/mut-str) is dual-licensed under either the Apache License Version 2.0 or MIT license at your option.
 
+#![cfg_attr(feature = "future", feature(extern_types))]
 #![warn(
     clippy::all,
     clippy::pedantic,
@@ -82,7 +84,7 @@
 #![allow(clippy::module_name_repetitions)]
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use core::str;
+use core::{mem::transmute, str};
 
 mod char_owned;
 mod char_ref;
@@ -129,6 +131,17 @@ pub fn copy_to<'a>(s: &str, buffer: &'a mut [u8]) -> Option<&'a mut str> {
         // copied to the slice.
         Some(unsafe { str::from_utf8_unchecked_mut(exact_buffer) })
     }
+}
+
+#[must_use]
+#[inline]
+/// Extend the lifetime of a mutable reference.
+///
+/// # Safety
+/// This should only be used when a slice is split and the original
+/// reference is 'forgotten' and replaced with one half.
+unsafe fn extend_lifetime_mut<'to, T: ?Sized>(value: &mut T) -> &'to mut T {
+    transmute(value)
 }
 
 #[cfg(test)]
