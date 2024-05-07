@@ -36,7 +36,7 @@ jobs:
 
     - name: Install nightly + Miri
       run: |
-        rustup toolchain install nightly --component miri
+        rustup toolchain install nightly --component miri,clippy
         rustup override set nightly
         cargo miri setup
 
