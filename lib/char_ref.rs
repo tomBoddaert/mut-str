@@ -1,7 +1,3 @@
-// Clippy recommends using `ptr::cast`, which does not work with unsized types,
-// like the future implementation of `Char`
-#![cfg_attr(not(feature = "future"), allow(clippy::ptr_as_ptr))]
-
 use core::{
     borrow::{Borrow, BorrowMut},
     cmp,
@@ -25,12 +21,12 @@ use crate::{
 };
 
 mod char_internal {
-    #[cfg(feature = "future")]
+    #[cfg(feature = "nightly")]
     extern "Rust" {
         pub type Char;
     }
 
-    #[cfg(not(feature = "future"))]
+    #[cfg(not(feature = "nightly"))]
     pub struct Char {
         _c: u8,
     }
@@ -44,7 +40,7 @@ mod char_internal {
 /// use mut_str::Char;
 ///
 /// let s = "Hello, World!";
-/// let c = Char::get(s, 1).unwrap();
+/// let c: &Char = Char::get(s, 1).unwrap();
 ///
 /// assert_eq!(c, 'e');
 /// ```
@@ -58,7 +54,14 @@ impl Char {
     /// # Safety
     /// `p` must be a pointer to the first byte of a valid UTF-8 character.
     pub const unsafe fn new_unchecked(p: *const u8) -> *const Self {
-        p as *const Self
+        #[cfg(feature = "nightly")]
+        {
+            p as *const Self
+        }
+        #[cfg(not(feature = "nightly"))]
+        {
+            p.cast()
+        }
     }
 
     #[must_use]
@@ -69,7 +72,14 @@ impl Char {
     /// `p` must be a mutable pointer to the first byte of a valid UTF-8 character that
     /// can be mutated. String literals cannot be mutated.
     pub const unsafe fn new_unchecked_mut(p: *mut u8) -> *mut Self {
-        p as *mut Self
+        #[cfg(feature = "nightly")]
+        {
+            p as *mut Self
+        }
+        #[cfg(not(feature = "nightly"))]
+        {
+            p.cast()
+        }
     }
 
     #[must_use]
@@ -79,7 +89,7 @@ impl Char {
         // SAFETY:
         // The character that `&self` points to must be at least 1 byte
         // long, so reading the first byte is valid.
-        unsafe { *ptr::from_ref::<Self>(self).cast() }
+        unsafe { *ptr::from_ref(self).cast() }
     }
 
     #[must_use]
@@ -89,7 +99,7 @@ impl Char {
     /// # Safety
     /// The caller must only mutate the value if it is an ASCII character, and the byte must remain valid ASCII.
     unsafe fn first_byte_mut(&mut self) -> &mut u8 {
-        &mut *ptr::from_mut::<Self>(self).cast()
+        &mut *ptr::from_mut(self).cast()
     }
 
     #[must_use]

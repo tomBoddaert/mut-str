@@ -20,9 +20,9 @@ jobs:
     - name: Clippy (stable)
       run: |
         cargo clippy --all-targets
-        cargo clippy --no-default-features -- -W clippy::unwrap_used -W clippy::expect_used
-        cargo clippy --no-default-features --features="alloc" -- -W clippy::unwrap_used -W clippy::expect_used
-        cargo clippy -- -W clippy::unwrap_used -W clippy::expect_used
+        cargo clippy --no-default-features
+        cargo clippy --no-default-features --features="alloc"
+        cargo clippy
 
     - name: Build (stable)
       run: |
@@ -32,7 +32,8 @@ jobs:
 
     - name: Run tests (stable)
       run: |
-        cargo test --all-targets --no-fail-fast
+        cargo test --no-fail-fast
+        cargo test --examples --no-fail-fast
 
     - name: Install nightly + Miri
       run: |
@@ -42,20 +43,23 @@ jobs:
 
     - name: Clippy (nightly)
       run: |
-        cargo clippy --all-targets --features="future"
-        cargo clippy --no-default-features --features="future" -- -W clippy::unwrap_used -W clippy::expect_used
-        cargo clippy --no-default-features --features="future,alloc" -- -W clippy::unwrap_used -W clippy::expect_used
-        cargo clippy --features="future" -- -W clippy::unwrap_used -W clippy::expect_used
+        cargo clippy --all-targets --features="nightly"
+        cargo clippy --no-default-features --features="nightly"
+        cargo clippy --no-default-features --features="nightly,alloc"
+        cargo clippy --features="nightly"
 
     - name: Build (nightly)
       run: |
-        cargo build --verbose --features="future"
-        cargo build --verbose --no-default-features --features="future"
-        cargo build --verbose --no-default-features --features="future,alloc"
+        cargo build --verbose --features="nightly"
+        cargo build --verbose --no-default-features --features="nightly"
+        cargo build --verbose --no-default-features --features="nightly,alloc"
 
     - name: Run tests (nightly)
       run: |
-        cargo test --all-targets --features="future" --no-fail-fast
+        cargo test --features="nightly" --no-fail-fast
+        cargo test --examples --features="nightly" --no-fail-fast
 
     - name: Run tests (nightly, miri)
-      run: cargo miri test --all-targets --features="future" --no-fail-fast
+      run: |
+        cargo miri test --features="nightly" --no-fail-fast
+        cargo miri test --examples --features="nightly" --no-fail-fast

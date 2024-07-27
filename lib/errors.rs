@@ -1,5 +1,7 @@
+#[cfg(feature = "nightly")]
+use core::error::Error;
 use core::{fmt, str::Utf8Error};
-#[cfg(feature = "std")]
+#[cfg(all(not(feature = "nightly"), feature = "std"))]
 use std::error::Error;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -130,13 +132,13 @@ impl fmt::Display for TryFromBytesError {
     }
 }
 
-#[cfg(feature = "std")]
+#[cfg(any(feature = "nightly", feature = "std"))]
 impl Error for LenNotEqual {}
 
-#[cfg(feature = "std")]
+#[cfg(any(feature = "nightly", feature = "std"))]
 impl Error for ReplacementTooLong {}
 
-#[cfg(feature = "std")]
+#[cfg(any(feature = "nightly", feature = "std"))]
 impl Error for ReplaceWithPadError {
     #[inline]
     fn source(&self) -> Option<&(dyn Error + 'static)> {
@@ -147,7 +149,7 @@ impl Error for ReplaceWithPadError {
     }
 }
 
-#[cfg(feature = "std")]
+#[cfg(any(feature = "nightly", feature = "std"))]
 impl Error for ReplaceWithPadCharError {
     #[inline]
     fn source(&self) -> Option<&(dyn Error + 'static)> {
@@ -158,10 +160,10 @@ impl Error for ReplaceWithPadCharError {
     }
 }
 
-#[cfg(feature = "std")]
-impl std::error::Error for TryFromBytesError {
+#[cfg(any(feature = "nightly", feature = "std"))]
+impl Error for TryFromBytesError {
     #[inline]
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
         Some(match self {
             Self::Utf8(error) => error,
             Self::Length(error) => error,
@@ -169,5 +171,5 @@ impl std::error::Error for TryFromBytesError {
     }
 }
 
-#[cfg(feature = "std")]
-impl std::error::Error for TryFromStrError {}
+#[cfg(any(feature = "nightly", feature = "std"))]
+impl Error for TryFromStrError {}

@@ -52,7 +52,7 @@
 #![doc = concat!("[Features on docs.rs](https://docs.rs/crate/mut-str/", env!("CARGO_PKG_VERSION"), "/features)  ")]
 //! - `alloc` (enabled by default) adds implementations that require the `alloc` library.
 //! - `std` (enabled by default, requires `alloc`) adds implementations specific to the standard library.
-//! - `future` (requires [nightly](https://rust-lang.github.io/rustup/concepts/channels.html)) uses the `extern_types` unstable feature to fix pointer provenance issues.
+//! - `nightly` (requires rust [nightly](https://rust-lang.github.io/rustup/concepts/channels.html)) see [below](#nightly-changes).
 //!
 //! To make this package `no-std` compatible, disable the `std` feature.  
 //! ```sh
@@ -62,11 +62,15 @@
 //! cargo add mut-str --no-default-features --features=alloc
 //! ```
 //!
+//! ## Nightly Changes
+//! - Uses the [`extern_types`](https://rust-lang.github.io/rfcs/1861-extern-types.html) feature to fix pointer provenance issues.
+//! - Implements [`Error`](https://doc.rust-lang.org/stable/core/error/trait.Error.html) for errors without [`std`](#features) being enabled.
+//!
 //! ## License
 //!
 //! [`mut-str`](https://github.com/tomBoddaert/mut-str) is dual-licensed under either the Apache License Version 2.0 or MIT license at your option.
 
-#![cfg_attr(feature = "future", feature(extern_types))]
+#![cfg_attr(feature = "nightly", feature(extern_types))]
 #![warn(
     clippy::all,
     clippy::pedantic,
@@ -81,6 +85,7 @@
     clippy::todo,
     clippy::undocumented_unsafe_blocks
 )]
+#![cfg_attr(not(test), warn(clippy::unwrap_used, clippy::expect_used))]
 #![allow(clippy::module_name_repetitions)]
 #![cfg_attr(not(feature = "std"), no_std)]
 
